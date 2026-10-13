@@ -1,0 +1,72 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Formal Verification + Runtime Monitoring</title>
+<style>
+:root{--bg:#0b0f14;--p:#131a23;--p2:#1a232e;--p3:#222d3a;--bd:#24303d;--fg:#e6edf3;--dim:#8b98a5;--d2:#64707d;--g:#3fb950;--r:#f85149;--y:#d29922;--b:#58a6ff;--pu:#bc8cff;--t:#2dd4bf;--gr:linear-gradient(90deg,#f85149,#bc8cff)}
+*{box-sizing:border-box;margin:0;padding:0}body{font:14px/1.5 system-ui,sans-serif;background:var(--bg);color:var(--fg)}
+::-webkit-scrollbar{width:8px}::-webkit-scrollbar-thumb{background:var(--bd);border-radius:4px}
+header{position:sticky;top:0;z-index:10;padding:14px 28px;border-bottom:1px solid var(--bd);background:linear-gradient(90deg,rgba(248,81,73,.08),rgba(188,140,255,.08)),var(--bg);display:flex;align-items:center;gap:12px}
+.logo{width:32px;height:32px;border-radius:8px;background:var(--gr);display:flex;align-items:center;justify-content:center;font-size:16px}
+header h1{font-size:16px;font-weight:700}.tag{color:var(--dim);font-size:11px;border:1px solid var(--bd);padding:2px 8px;border-radius:999px;text-transform:uppercase}
+.spacer{flex:1}.badge{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:5px 11px;border-radius:999px;border:1px solid var(--bd);background:var(--p2)}.badge .dot{width:8px;height:8px;border-radius:50%;background:var(--g);animation:p 1.6s infinite}@keyframes p{0%,100%{opacity:1}50%{opacity:.4}}
+main{max-width:1300px;margin:0 auto;padding:24px 28px 80px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px}
+.card{background:var(--p);border:1px solid var(--bd);border-radius:10px;padding:16px;position:relative;overflow:hidden}.card::before{content:"";position:absolute;left:0;top:0;width:3px;height:100%;background:var(--b)}.card.g::before{background:var(--g)}.card.r::before{background:var(--r)}.card.y::before{background:var(--y)}.card.pu::before{background:var(--pu)}.card.t::before{background:var(--t)}
+.card .l{font-size:10px;text-transform:uppercase;color:var(--dim)}.card .v{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:4px}.card .v.g{color:var(--g)}.v.r{color:var(--r)}.v.y{color:var(--y)}.v.pu{color:var(--pu)}.v.t{color:var(--t)}
+.panel{background:var(--p);border:1px solid var(--bd);border-radius:10px;overflow:hidden;margin-bottom:20px}.panel h2{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;padding:14px 18px;border-bottom:1px solid var(--bd)}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px 14px;text-align:left;border-bottom:1px solid var(--bd)}th{color:var(--dim);font-size:10px;text-transform:uppercase}
+.pill{padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700}.pill.holds{background:rgba(63,185,80,.15);color:var(--g)}.pill.violated{background:rgba(248,81,73,.15);color:var(--r)}
+.pill.healthy{background:rgba(63,185,80,.15);color:var(--g)}.pill.alert{background:rgba(248,81,73,.15);color:var(--r)}
+.pill.critical{background:rgba(248,81,73,.2);color:var(--r)}.pill.high{background:rgba(210,153,34,.2);color:var(--y)}.pill.none{background:rgba(63,185,80,.15);color:var(--g)}
+.grid2{display:grid;grid-template-columns:1fr;gap:20px}@media(min-width:1000px){.grid2{grid-template-columns:1fr 1fr}}
+.arch{font-size:12px;color:var(--dim);line-height:1.9;padding:14px 18px}.arch b{color:var(--fg)}
+.code{font-family:monospace;font-size:11px;background:#070a0e;border-radius:8px;padding:14px;color:var(--t);margin:14px 18px;overflow-x:auto}
+footer{text-align:center;padding:28px;color:var(--d2);font-size:12px;border-top:1px solid var(--bd);margin-top:20px}
+</style></head><body>
+<header><div class="logo">⚖</div><h1>Formal Verification + Runtime Monitoring</h1><span class="tag">TLA+ · Chaos · Runtime</span><div class="spacer"></div><span class="badge"><span class="dot"></span><span id="st">live</span></span></header>
+<main>
+<div class="cards" id="cards"></div>
+<div class="grid2">
+<div>
+<div class="panel"><h2>TLA+ Invariants (model-checked)</h2><table><thead><tr><th>Invariant</th><th>Status</th><th class="r">Violations</th></tr></thead><tbody id="inv"></tbody></table></div>
+<div class="panel"><h2>Runtime Monitors (injected into service)</h2><table><thead><tr><th>Monitor</th><th>State</th></tr></thead><tbody id="mon"></tbody></table></div>
+</div>
+<div>
+<div class="panel"><h2>Chaos Experiments (Jepsen-style)</h2><table><thead><tr><th>Experiment</th><th>Finding</th><th>Severity</th></tr></thead><tbody id="ch"></tbody></table></div>
+<div class="panel"><h2>PlusCal Spec (excerpt)</h2><div class="code">---- MODULE ExactlyOnce ----
+VARIABLES delivered, queue
+Init == delivered = << >> /\ queue = << >>
+Deliver(msg) == /\ msg \notin delivered
+               /\ delivered' = Append(delivered, msg)
+               /\ queue' = Tail(queue)
+Next == /\ Len(queue) > 0 /\ Deliver(Head(queue))
+Inv == \A m \in delivered : m # m   (* no duplicates *)
+==============================</div></div>
+<div class="panel"><h2>Architecture</h2><div class="arch">
+<div>📝 <b>TLA+/PlusCal</b> — model the protocol (leader election, consensus, exactly-once)</div>
+<div>🔍 <b>Model checker</b> (TLC) — explores all states, finds invariant violations</div>
+<div>📡 <b>Runtime monitors</b> — compiled from invariants into Go/Rust asserts</div>
+<div>💥 <b>Chaos</b> — Jepsen + Chaos Mesh validate the model at runtime</div>
+<div style="margin-top:8px;color:var(--d2)">Stack: TLA+ · PlusCal · Rust/Go · Jepsen · Chaos Mesh</div>
+</div></div>
+</div>
+</div></main>
+<footer>Formal Verification + Runtime Monitoring · MIT</footer>
+<script>
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]))}
+async function load(){try{
+const r=await fetch('/api/status');const d=await r.json();
+document.getElementById('st').textContent=`${d.statesExplored.toLocaleString()} states · ${d.bugsFound} bugs found`;
+document.getElementById('cards').innerHTML=[
+ c('States Explored',d.statesExplored.toLocaleString(),'pu'),
+ c('Depth Bound',d.depthBound,'b'),
+ c('Invariants',d.invariants.length,'t'),
+ c('Bugs Found',d.bugsFound,'r'),
+].join('');
+document.getElementById('inv').innerHTML=d.invariants.map(i=>`<tr><td><code>${esc(i.name)}</code></td><td><span class="pill ${i.status}">${i.status}</span></td><td style="text-align:right">${i.violations}</td></tr>`).join('');
+document.getElementById('mon').innerHTML=d.monitors.map(m=>`<tr><td><code>${esc(m.name)}</code></td><td><span class="pill ${m.state}">${m.state}</span></td></tr>`).join('');
+document.getElementById('ch').innerHTML=d.chaos.map(c=>`<tr><td>${esc(c.exp)}</td><td style="color:var(--dim)">${esc(c.found)}</td><td><span class="pill ${c.severity}">${c.severity}</span></td></tr>`).join('');
+}catch(e){document.getElementById('st').textContent='offline'}}
+function c(l,v,col){return `<div class="card ${col}"><div class="l">${l}</div><div class="v ${col}">${v}</div></div>`}
+load();setInterval(load,4000);
+</script>
+</body></html>
