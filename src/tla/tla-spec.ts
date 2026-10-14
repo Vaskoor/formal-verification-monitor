@@ -21,8 +21,11 @@ export const exactlyOnceSpec: TlaSpec = {
       }
       // Drop (msg lost — queue advances without delivery)
       states.push({ delivered, queue: queue.slice(1) });
-      // Duplicate (re-deliver already-delivered msg — violates exactly-once)
-      states.push({ delivered: [...delivered, msg], queue: queue.slice(1) });
+    }
+    // Re-deliver an already-delivered message (violates exactly-once)
+    if (delivered.length > 0) {
+      const dup = delivered[0];
+      states.push({ delivered: [...delivered, dup], queue });
     }
     return states;
   },
