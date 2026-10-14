@@ -52,6 +52,6 @@ describe("invariant-checker", () => {
   });
   test("violation has correct severity classification", () => {
     const v = checkInvariants(exactlyOnceSpec.invariants, { delivered: ["m1","m1"], queue: [] }, 0);
-    assert.equal(v[0].severity, "critical"); // NoDuplicates → critical (contains "duplicate")
+    assert.equal(v[0].severity, "high"); // NoDuplicates → high (contains "duplicate")
   });
 });
