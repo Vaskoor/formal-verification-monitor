@@ -1,0 +1,12 @@
+version: "3.8"
+services:
+  jepsen:
+    image: jepsen/jepsen:latest
+    volumes: ["./jepsen:/jepsen"]
+    entrypoint: ["sleep", "3600"]
+  chaos-mesh:
+    image: ghcr.io/chaos-mesh/chaos-mesh:latest
+    ports: ["13082:13082"]
+  prometheus:
+    image: prom/prometheus:v3.0.0
+    ports: ["9090:9090"]
